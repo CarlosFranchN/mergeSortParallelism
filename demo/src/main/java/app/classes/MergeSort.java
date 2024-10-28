@@ -1,9 +1,7 @@
 package app.classes;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.HashMap;
-import java.util.Map.Entry;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.RecursiveAction;
 
 public class MergeSort extends RecursiveAction {
@@ -15,10 +13,39 @@ public class MergeSort extends RecursiveAction {
     public long time_paralelo;
     public long time_serial;
     public int nThreads;
-    private static HashMap<String, int[]> mapTimes = new HashMap<>();
+    private static HashMap<String, Long> mapTimes = new HashMap<>();
+    private static HashMap<Integer, Long> mapTimes2 = new HashMap<>();
+    private static TreeMap<Integer, Long> finalMap = new TreeMap<>();
 
-    public static HashMap<String, int[]> getMapTimes() {
+    public HashMap<String, Long> getMapTimes() {
         return mapTimes;
+    }
+    public HashMap<Integer, Long> getMapTimes2() {
+        return mapTimes2;
+    }
+
+    public  TreeMap<Integer, Long> getFinalMap() {
+        return finalMap;
+    }
+    public void printMapTimes() {
+        System.out.println("Tempos de execução armazenados no mapTimes:");
+        for (Map.Entry<String, Long> entry : mapTimes.entrySet()) {
+            System.out.println(entry.getKey() + " = " + entry.getValue() + " ns");
+        }
+    }
+
+    public void printMapTimes2() {
+        System.out.println("Tempos de execução armazenados no mapTimes:");
+        for (Map.Entry<Integer, Long> entry : mapTimes2.entrySet()) {
+            System.out.println(entry.getKey() + " = " + entry.getValue() + " ns");
+        }
+    }
+    public void printarFinalMap(){
+        TreeMap<Integer, Long> Map = new TreeMap<>(mapTimes2);
+        for (Map.Entry<Integer, Long> entry : Map.entrySet()) {
+            finalMap.put(entry.getKey(), entry.getValue());
+            System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
+        }
     }
 
     public MergeSort(int[] array, int left, int right, int nThreads){
@@ -77,7 +104,7 @@ public class MergeSort extends RecursiveAction {
     public void serial(){
         long inicio = System.nanoTime();
     
-        // Chama o método de MergeSort serial recursivo
+        
         mergeSortSerial(this.array, this.left, this.right);
     
         long fim = System.nanoTime();
@@ -123,74 +150,41 @@ public class MergeSort extends RecursiveAction {
         }
 }
 
-    public int[] gerarTesteSerial(int repeticoes){
-        int[] resultados = new int[repeticoes];
-        for( int i=0; i<repeticoes;i++){
-            MergeSort task = new MergeSort(this.array, this.left,this.right-1,this.nThreads);
-            task.serial();
-            resultados[i] = (int) task.time_serial;
-        }
-        mapTimes.put("MergeSortSerial", resultados);
-        return resultados;
-    }
-    public int[] gerarTesteParalelo(int repeticoes){
-        int[] resultados = new int[repeticoes];
-        for( int i=0; i<repeticoes;i++){
-            MergeSort task = new MergeSort(this.array, this.left,this.right-1,this.nThreads);
-            task.paralelo();
-            resultados[i] = (int) task.time_paralelo;
-        }
-        mapTimes.put("MergeSortParalelo", resultados);
-        return resultados;
-    }
+    public void gerarTesteSerial(){
 
-    public void gerarCsv() {
-        String path = "projeto_test/demo/csv/mergeSort.csv";
-        FileWriter writer = null;
+        MergeSort task = new MergeSort(this.array, this.left,this.right-1,0);
+        task.serial();
+
+        mapTimes.put("MergeSortSerial", task.time_serial);
+        mapTimes2.put(0, task.time_serial);
+
+    }
+    public void gerarTesteParalelo(){
+        // int[] resultados = new int[repeticoes];
+        int[] numThreads = {2,4,5,10,100,1000,10000};
+        // for( int i=0; i<repeticoes;i++){
+        //     MergeSort task = new MergeSort(this.array, this.left,this.right-1,this.nThreads);
+        //     task.paralelo();
+        //     resultados[i] = (int) task.time_paralelo;
+        // }
+        for (int t : numThreads) {
+            MergeSort task = new MergeSort(this.array, this.left,this.right-1,t);
+            task.paralelo();
+            String key = String.format("MergeSortParalelo%d", t);
+            mapTimes.put(key, task.time_paralelo);
+            mapTimes2.put(t,task.time_paralelo);
+        }
+
+    }
+    public void gerandoTeste(){
         try {
-            // Verifica se o arquivo já existe e modifica o nome para evitar sobrescrita
-            File file = new File(path);
-            String originalPath = path;
-            int counter = 1;
-    
-            // Se o arquivo existir, adiciona um sufixo para criar um novo arquivo
-            while (file.exists()) {
-                String newPath = originalPath.replace(".csv", "_" + counter + ".csv");
-                file = new File(newPath);
-                path = newPath;  // Atualiza o path para o novo nome
-                counter++;
-            }
-    
-            writer = new FileWriter(path);  // Cria o arquivo novo
-            writer.append("Algoritmo,Tempos\n");
-    
-            for (Entry<String, int[]> entrada : mapTimes.entrySet()) {
-                writer.append(entrada.getKey()).append(",");
-    
-                int[] valores = entrada.getValue();
-                for (int i = 0; i < valores.length; i++) {
-                    writer.append(String.valueOf(valores[i]));
-                    if (i < valores.length - 1) {
-                        writer.append(",");
-                    }
-                }
-                writer.append("\n");
-            }
-    
-            System.out.println("Arquivo CSV gerado com sucesso! Caminho: " + path);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (writer != null) {
-                    writer.flush();
-                    writer.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            gerarTesteSerial();
+            gerarTesteParalelo();
+            System.out.println("Testes gerados!");
+            
+        } catch (Exception e) {
+            System.out.println("Erro");
         }
     }
-    
 
 }
